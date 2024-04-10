@@ -12,7 +12,6 @@ read_line(L,C) :-
 		read_line(LL,_),% atom_codes(C,[Cd]),
 		[C|LL] = L).
 
-
 /** Tests a character for EOF or LF. */
 isEOFEOL(C) :-
 	C == end_of_file;
@@ -23,18 +22,6 @@ read_lines(Ls) :-
 	( C == end_of_file, Ls = [] ;
 	  read_lines(LLs), Ls = [L|LLs]
 	).
-
-/** rozdeli radek na podseznamy */
-split_line([],[[]]) :- !.
-split_line([' '|T], [[]|S1]) :- !, split_line(T,S1).
-split_line([32|T], [[]|S1]) :- !, split_line(T,S1).    % aby to fungovalo i s retezcem na miste seznamu
-split_line([H|T], [[H|G]|S1]) :- split_line(T,[G|S1]). % G je prvni seznam ze seznamu seznamu G|S1
-
-
-/** vstupem je seznam radku (kazdy radek je seznam znaku) */
-split_lines([],[]).
-split_lines([L|Ls],[H|T]) :- split_lines(Ls,T), split_line(L,H).
-
 
 /** odstrani ze seznamu mezery */
 cut_whitespaces([], []).
@@ -69,26 +56,41 @@ init([_], []).
 init([H|T], [H|Res]) :-
     init(T, Res).
 
+last([X], X).
+last([_|T], Res) :-
+    last(T, Res).
+
 start :-
 		prompt(_, ''),
 		read_lines(LL),
 
+        % Preprocces rules and tape.
+
+        % Rules
         init(LL, Rules),
-        %mark_whitespaces(Rules, RulesMarkedWhitespaces),
-        %write(RulesMarkedWhitespaces), 
         cut_whitespaces_ll(Rules, RulesNoWhitespace),
 
-        %write(Rules),
-        %write(LLL),
+        % Tape
+        last(LL, Tape),
 
-		%split_lines(LL,S),
-        %write(S),
         write(RulesNoWhitespace),
+        write(Tape),
 
         retract_all_dynamic,
 
 		halt.
 
+
+/** rozdeli radek na podseznamy */
+%split_line([],[[]]) :- !.
+%split_line([' '|T], [[]|S1]) :- !, split_line(T,S1).
+%split_line([32|T], [[]|S1]) :- !, split_line(T,S1).    % aby to fungovalo i s retezcem na miste seznamu
+%split_line([H|T], [[H|G]|S1]) :- split_line(T,[G|S1]). % G je prvni seznam ze seznamu seznamu G|S1
+
+
+/** vstupem je seznam radku (kazdy radek je seznam znaku) */
+%split_lines([],[]).
+%split_lines([L|Ls],[H|T]) :- split_lines(Ls,T), split_line(L,H).
 
 /** nacte zadany pocet radku */
 %read_lines2([],0).
