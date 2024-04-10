@@ -49,6 +49,20 @@ cut_whitespaces_ll([H|T], [HRes|TRes]) :-
     cut_whitespaces(H, HRes),
     cut_whitespaces_ll(T, TRes).
 
+/** Dynamic rule for the Turing Machine rules */
+:- dynamic rule/4.
+
+add_rule([InnerState, TapeSymbol, NextState, NewTapeSymbol]) :-
+    assertz(rule(InnerState, TapeSymbol, NextState, NewTapeSymbol)).
+
+/** prida vsechna pravidla ze seznamu pravidel */
+add_rules_from_list([]).
+add_rules_from_list([H|T]) :-
+    add_rule(H), add_rules_from_list(T).
+
+retract_all_dynamic :-
+    retractall(rule(_,_,_,_)).
+
 /** vrati seznam bez posledniho prvku (jako init funkce z Haskellu) */
 % https://stackoverflow.com/a/16175064
 init([_], []).
@@ -70,6 +84,8 @@ start :-
 		%split_lines(LL,S),
         %write(S),
         write(RulesNoWhitespace),
+
+        retract_all_dynamic,
 
 		halt.
 
