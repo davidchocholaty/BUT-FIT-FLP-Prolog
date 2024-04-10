@@ -69,12 +69,24 @@ start :-
         % Rules
         init(LL, Rules),
         cut_whitespaces_ll(Rules, RulesNoWhitespace),
+        add_rules_from_list(RulesNoWhitespace),
 
         % Tape
         last(LL, Tape),
 
         write(RulesNoWhitespace),
         write(Tape),
+
+        % The configuration of the machine is determined by the state of the 
+        % control and the configuration of the tape - this is a formal matter 
+        % of an element of the set Q × {γ∆ω | γ ∈ Γ∗} × N.
+        
+        % TODO mozna mohou i nektere z toho byt reprezentovany jako dynamic (v podstate by se to dalo aplikovat na vsechny tri, 
+        % ale asi je hloupost to mit, protoze vzdy u kazdyho muze byt pouze jeden predikat - jeden stav, ...)
+
+        % Mozna ale by nebylo spatny neco jako uchovavat vsechny tri dohromady, abych pak byl schopny detekovat zacykleni.
+
+        % run('S', Tape, HeadPosition),
 
         retract_all_dynamic,
 
