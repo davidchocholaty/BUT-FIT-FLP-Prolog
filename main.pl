@@ -38,6 +38,18 @@ cut_whitespaces_ll([H|T], [HRes|TRes]) :-
 
 /** Dynamic rule for the Turing Machine rules */
 :- dynamic rule/4.
+:- dynamic visitedConf/3.
+
+is_visited_conf(InnerState, Tape, HeadPosition) :-
+    visitedConf(InnerState, Tape, HeadPosition).
+
+add_conf(InnerState, Tape, HeadPosition) :-
+    assertz(visitedConf(InnerState, Tape, HeadPosition)).
+
+accepts(InnerState) :-
+    InnerState == 'F'.
+
+init_head_position(0).
 
 add_rule([InnerState, TapeSymbol, NextState, NewTapeSymbol]) :-
     assertz(rule(InnerState, TapeSymbol, NextState, NewTapeSymbol)).
@@ -45,10 +57,54 @@ add_rule([InnerState, TapeSymbol, NextState, NewTapeSymbol]) :-
 /** prida vsechna pravidla ze seznamu pravidel */
 add_rules_from_list([]).
 add_rules_from_list([H|T]) :-
-    add_rule(H), add_rules_from_list(T).
+    add_rule(H),
+    add_rules_from_list(T).
 
 retract_all_dynamic :-
-    retractall(rule(_,_,_,_)).
+    retractall(rule(_,_,_,_)),
+    retractall(visitedConf(_,_,_)).
+
+replace_symbol([], _, _, []).
+replace_symbol(Tape, 'L', _, UpdatedTape) :-
+    UpdatedTape = Tape.
+replace_symbol(Tape, 'R', _, UpdatedTape) :-
+    UpdatedTape = Tape. 
+replace_symbol(Tape, NewTapeSymbol, HeadPosition, UpdatedTape) :-
+    nth0(HeadPosition, Tape, _, Rest),
+    nth0(HeadPosition, UpdatedTape, NewTapeSymbol, Rest).
+
+% TODO mozna nekde kontrola, zda nejsme mimo pasku uz
+update_head_position(Current, 'L', New) :-
+    New is Current - 1.
+update_head_position(Current, 'R', New) :-    
+    New is Current + 1.
+update_head_position(Current, _, New) :-
+    New is Current.
+
+add_state_to_tape(InnerState, Tape, HeadPosition, TapeWState) :-
+    length(Pref, HeadPosition),
+    append(Pref, Suf, Tape),
+    append(Pref, [InnerState|Suf], TapeWState).
+
+
+list_2_str([], '').
+list_2_str([H|T], Res) :-
+    atom_string(H, HStr),
+    list_2_str(T, TStr),
+    string_concat(HStr, TStr, Res).
+
+write_confs([]).
+write_confs([H|T]) :-
+    list_2_str(H, HStr),
+    writeln(HStr),
+    write_confs(T).
+
+write_all_confs :-
+    findall(TapeWState, (
+        visitedConf(InnerState, Tape, HeadPosition),
+        add_state_to_tape(InnerState, Tape, HeadPosition, TapeWState)
+    ), Confs),
+    write_confs(Confs).
 
 /** vrati seznam bez posledniho prvku (jako init funkce z Haskellu) */
 % https://stackoverflow.com/a/16175064
@@ -59,6 +115,28 @@ init([H|T], [H|Res]) :-
 last([X], X).
 last([_|T], Res) :-
     last(T, Res).
+
+% TODO jeslti nekde pouzit !
+run(InnerState, Tape, HeadPosition, Depth, MaxDepth) :-
+    Depth < MaxDepth,
+    accepts(InnerState),
+    add_conf(InnerState, Tape, HeadPosition).
+run(InnerState, Tape, HeadPosition, Depth, MaxDepth) :-
+    Depth < MaxDepth,
+    not(is_visited_conf(InnerState, Tape, HeadPosition)),
+    add_conf(InnerState, Tape, HeadPosition),
+    nth0(HeadPosition, Tape, TapeSymbol),
+    %once(rule(InnerState, TapeSymbol, NextState, NewTapeSymbol)),
+    rule(InnerState, TapeSymbol, NextState, NewTapeSymbol),
+    replace_symbol(Tape, NewTapeSymbol, HeadPosition, UpdatedTape),
+    update_head_position(HeadPosition, NewTapeSymbol, NewHeadPosition),
+    NewDepth is Depth + 1,
+    run(NextState, UpdatedTape, NewHeadPosition, NewDepth, MaxDepth).
+run(InnerState, Tape, HeadPosition, _, _) :-
+    not(accepts(InnerState)),
+    is_visited_conf(InnerState, Tape, HeadPosition),
+    retract(visitedConf(InnerState, Tape, HeadPosition)),
+    fail.
 
 start :-
 		prompt(_, ''),
@@ -74,8 +152,8 @@ start :-
         % Tape
         last(LL, Tape),
 
-        write(RulesNoWhitespace),
-        write(Tape),
+        %write(RulesNoWhitespace),
+        %write(Tape),
 
         % The configuration of the machine is determined by the state of the 
         % control and the configuration of the tape - this is a formal matter 
@@ -86,7 +164,9 @@ start :-
 
         % Mozna ale by nebylo spatny neco jako uchovavat vsechny tri dohromady, abych pak byl schopny detekovat zacykleni.
 
-        % run('S', Tape, HeadPosition),
+        run('S', Tape, 0, 0, 1000),
+
+        write_all_confs,
 
         retract_all_dynamic,
 
