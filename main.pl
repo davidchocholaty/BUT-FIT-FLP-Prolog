@@ -139,8 +139,8 @@ run(InnerState, Tape, HeadPosition, _, _) :-
     fail.
 
 start :-
-		prompt(_, ''),
-		read_lines(LL),
+        prompt(_, ''),
+        read_lines(LL),
 
         % Preprocces rules and tape.
 
