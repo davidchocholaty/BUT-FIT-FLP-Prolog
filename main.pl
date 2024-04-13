@@ -44,9 +44,8 @@ accepts(InnerState) :-
     InnerState == 'F'.
 
 init_exit_codes :-
-    assertz(exitCode('abnormal_stopping', 1)),
-    assertz(exitCode('looping', 2)),
-    assertz(exitCode('invalid_input', 3)).
+    assertz(exitCode('abnormal_looping', 1)),
+    assertz(exitCode('invalid_input', 2)).
 
 add_rule([InnerState, TapeSymbol, NextState, NewTapeSymbol]) :-
     assertz(rule(InnerState, TapeSymbol, NextState, NewTapeSymbol)).
@@ -192,10 +191,9 @@ start :-
         % control and the configuration of the tape - this is a formal matter 
         % of an element of the set Q × {γ∆ω | γ ∈ Γ∗} × N.
         ( !, run('S', Tape, 0, 0, 1000, []) ->
-            %write_all_confs
             true
-        ; writeln('Error: Turing Machine stopped abnormally.'),
-          exitCode(abnormal_stopping, Code),
+        ; writeln('Error: Turing Machine stopped abnormally or looped.'),
+          exitCode(abnormal_looping, Code),
           retract_all_dynamic,
           halt(Code)
         ),
