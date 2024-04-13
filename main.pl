@@ -117,8 +117,7 @@ last([_|T], Res) :-
     last(T, Res).
 
 % TODO jeslti nekde pouzit !
-run(InnerState, Tape, HeadPosition, Depth, MaxDepth) :-
-    Depth < MaxDepth,
+run(InnerState, Tape, HeadPosition, _, _) :-
     accepts(InnerState),
     add_conf(InnerState, Tape, HeadPosition).
 run(InnerState, Tape, HeadPosition, Depth, MaxDepth) :-
