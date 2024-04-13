@@ -141,7 +141,8 @@ is_valid_tape([H|T]) :-
     ( is_valid_tape_symbol(H) ->
       is_valid_tape(T)
     ; writeln('Error: invalid input Turing Machine tape.'),
-      exit_code(invalid_input, Code),
+      exitCode(invalid_input, Code),
+      retract_all_dynamic,
       halt(Code)
     ).
 
@@ -156,7 +157,8 @@ valid_rules([H|T]) :-
     ( is_valid_rule(H) ->
       valid_rules(T)
     ; writeln('Error: invalid input Turing Machine rule.'),
-      exit_code(invalid_input, Code),
+      exitCode(invalid_input, Code),
+      retract_all_dynamic,
       halt(Code)
     ).
 
@@ -201,10 +203,13 @@ start :-
         % The configuration of the machine is determined by the state of the 
         % control and the configuration of the tape - this is a formal matter 
         % of an element of the set Q × {γ∆ω | γ ∈ Γ∗} × N.
-
-        run('S', Tape, 0, 0, 1000),
-
-        write_all_confs,
+        ( !, run('S', Tape, 0, 0, 1000) ->
+            write_all_confs
+        ; writeln('Error: Turing Machine stopped abnormally.'),
+          exitCode(abnormal_stopping, Code),
+          retract_all_dynamic,
+          halt(Code)
+        ),
 
         retract_all_dynamic,
 
