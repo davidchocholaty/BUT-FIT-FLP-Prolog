@@ -64,6 +64,7 @@ retract_all_dynamic :-
     retractall(rule(_,_,_,_)),
     retractall(visitedConf(_,_,_)).
 
+% TODO jestli nespojit tuto a funkci pro posun
 replace_symbol([], _, _, []).
 replace_symbol(Tape, 'L', _, UpdatedTape) :-
     UpdatedTape = Tape.
@@ -116,6 +117,37 @@ last([X], X).
 last([_|T], Res) :-
     last(T, Res).
 
+is_valid_state(X) :-
+    atom_length(X, 1),
+    char_type(X, alpha),
+    char_type(X, upper).
+
+is_valid_tape_symbol(X) :-
+    atom_length(X, 1),
+    char_type(X, alpha),
+    char_type(X, lower).
+
+is_valid_tape([]).
+is_valid_tape([H|T]) :-
+    is_valid_tape_symbol(H),
+    is_valid_tape(T).
+
+is_valid_new_tape_symbol(X) :-
+    atom_length(X, 1),
+    char_type(X, alpha),
+    (X = 'L' ; X = 'R' ; char_type(X, lower)).
+
+is_valid_rule([InnerState, TapeSymbol, NextState, NewTapeSymbol]) :-
+    is_valid_state(InnerState),
+    is_valid_state(NextState),
+    is_valid_tape_symbol(TapeSymbol),
+    is_valid_new_tape_symbol(NewTapeSymbol).
+
+valid_rules([]).
+valid_rules([H|T]) :-
+    is_valid_rule(H),
+    valid_rules(T).
+
 % TODO jeslti nekde pouzit !
 run(InnerState, Tape, HeadPosition, _, _) :-
     accepts(InnerState),
@@ -147,9 +179,11 @@ start :-
         init(LL, Rules),
         cut_whitespaces_ll(Rules, RulesNoWhitespace),
         add_rules_from_list(RulesNoWhitespace),
+        valid_rules(RulesNoWhitespace), % TODO return code nebo vypis
 
         % Tape
         last(LL, Tape),
+        is_valid_tape(Tape), % TODO return code nebo vypis
 
         %write(RulesNoWhitespace),
         %write(Tape),
