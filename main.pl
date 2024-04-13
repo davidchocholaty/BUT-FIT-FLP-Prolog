@@ -37,6 +37,7 @@ cut_whitespaces_ll([H|T], [HRes|TRes]) :-
     cut_whitespaces_ll(T, TRes).
 
 /** Dynamic rule for the Turing Machine rules */
+:- dynamic exitCode/2.
 :- dynamic rule/4.
 :- dynamic visitedConf/3.
 
@@ -49,7 +50,10 @@ add_conf(InnerState, Tape, HeadPosition) :-
 accepts(InnerState) :-
     InnerState == 'F'.
 
-init_head_position(0).
+init_exit_codes :-
+    assertz(exitCode('abnormal_stopping', 1)),
+    assertz(exitCode('looping', 2)),
+    assertz(exitCode('invalid_input', 3)).
 
 add_rule([InnerState, TapeSymbol, NextState, NewTapeSymbol]) :-
     assertz(rule(InnerState, TapeSymbol, NextState, NewTapeSymbol)).
@@ -61,6 +65,7 @@ add_rules_from_list([H|T]) :-
     add_rules_from_list(T).
 
 retract_all_dynamic :-
+    retractall(exitCode(_,_)),
     retractall(rule(_,_,_,_)),
     retractall(visitedConf(_,_,_)).
 
@@ -86,7 +91,6 @@ add_state_to_tape(InnerState, Tape, HeadPosition, TapeWState) :-
     length(Pref, HeadPosition),
     append(Pref, Suf, Tape),
     append(Pref, [InnerState|Suf], TapeWState).
-
 
 list_2_str([], '').
 list_2_str([H|T], Res) :-
@@ -127,15 +131,19 @@ is_valid_tape_symbol(X) :-
     char_type(X, alpha),
     char_type(X, lower).
 
-is_valid_tape([]).
-is_valid_tape([H|T]) :-
-    is_valid_tape_symbol(H),
-    is_valid_tape(T).
-
 is_valid_new_tape_symbol(X) :-
     atom_length(X, 1),
     char_type(X, alpha),
     (X = 'L' ; X = 'R' ; char_type(X, lower)).
+
+is_valid_tape([]).
+is_valid_tape([H|T]) :-
+    ( is_valid_tape_symbol(H) ->
+      is_valid_tape(T)
+    ; writeln('Error: invalid input Turing Machine tape.'),
+      exit_code(invalid_input, Code),
+      halt(Code)
+    ).
 
 is_valid_rule([InnerState, TapeSymbol, NextState, NewTapeSymbol]) :-
     is_valid_state(InnerState),
@@ -145,8 +153,12 @@ is_valid_rule([InnerState, TapeSymbol, NextState, NewTapeSymbol]) :-
 
 valid_rules([]).
 valid_rules([H|T]) :-
-    is_valid_rule(H),
-    valid_rules(T).
+    ( is_valid_rule(H) ->
+      valid_rules(T)
+    ; writeln('Error: invalid input Turing Machine rule.'),
+      exit_code(invalid_input, Code),
+      halt(Code)
+    ).
 
 % TODO jeslti nekde pouzit !
 run(InnerState, Tape, HeadPosition, _, _) :-
@@ -157,7 +169,6 @@ run(InnerState, Tape, HeadPosition, Depth, MaxDepth) :-
     not(is_visited_conf(InnerState, Tape, HeadPosition)),
     add_conf(InnerState, Tape, HeadPosition),
     nth0(HeadPosition, Tape, TapeSymbol),
-    %once(rule(InnerState, TapeSymbol, NextState, NewTapeSymbol)),
     rule(InnerState, TapeSymbol, NextState, NewTapeSymbol),
     replace_symbol(Tape, NewTapeSymbol, HeadPosition, UpdatedTape),
     update_head_position(HeadPosition, NewTapeSymbol, NewHeadPosition),
@@ -170,6 +181,8 @@ run(InnerState, Tape, HeadPosition, _, _) :-
     fail.
 
 start :-
+        init_exit_codes,
+
         prompt(_, ''),
         read_lines(LL),
 
