@@ -39,13 +39,6 @@ cut_whitespaces_ll([H|T], [HRes|TRes]) :-
 /** Dynamic rule for the Turing Machine rules */
 :- dynamic exitCode/2.
 :- dynamic rule/4.
-:- dynamic visitedConf/3.
-
-is_visited_conf(InnerState, Tape, HeadPosition) :-
-    visitedConf(InnerState, Tape, HeadPosition).
-
-add_conf(InnerState, Tape, HeadPosition) :-
-    assertz(visitedConf(InnerState, Tape, HeadPosition)).
 
 accepts(InnerState) :-
     InnerState == 'F'.
@@ -101,17 +94,11 @@ list_2_str([H|T], Res) :-
     string_concat(HStr, TStr, Res).
 
 write_confs([]).
-write_confs([H|T]) :-
-    list_2_str(H, HStr),
-    writeln(HStr),
+write_confs([InnerState-Tape-HeadPosition|T]) :-
+    add_state_to_tape(InnerState, Tape, HeadPosition, TapeWState),
+    list_2_str(TapeWState, TapeWStateStr),
+    writeln(TapeWStateStr),
     write_confs(T).
-
-write_all_confs :-
-    findall(TapeWState, (
-        visitedConf(InnerState, Tape, HeadPosition),
-        add_state_to_tape(InnerState, Tape, HeadPosition, TapeWState)
-    ), Confs),
-    write_confs(Confs).
 
 /** vrati seznam bez posledniho prvku (jako init funkce z Haskellu) */
 % https://stackoverflow.com/a/16175064
@@ -165,23 +152,22 @@ valid_rules([H|T]) :-
     ).
 
 % TODO jeslti nekde pouzit !
-run(InnerState, Tape, HeadPosition, _, _) :-
+run(InnerState, Tape, HeadPosition, _, _, History) :-
     accepts(InnerState),
-    add_conf(InnerState, Tape, HeadPosition).
-run(InnerState, Tape, HeadPosition, Depth, MaxDepth) :-
+    append(History, [InnerState-Tape-HeadPosition], ExtendedHistory),
+    write_confs(ExtendedHistory).
+run(InnerState, Tape, HeadPosition, Depth, MaxDepth, History) :-
     Depth < MaxDepth,
-    not(is_visited_conf(InnerState, Tape, HeadPosition)),
-    add_conf(InnerState, Tape, HeadPosition),
-    nth0(HeadPosition, Tape, TapeSymbol),
+    not(member(InnerState-Tape-HeadPosition, History)),
+    nth0(HeadPosition, Tape, TapeSymbol),    
     rule(InnerState, TapeSymbol, NextState, NewTapeSymbol),
     replace_symbol(Tape, NewTapeSymbol, HeadPosition, UpdatedTape),
     update_head_position(HeadPosition, NewTapeSymbol, NewHeadPosition),
     NewDepth is Depth + 1,
-    run(NextState, UpdatedTape, NewHeadPosition, NewDepth, MaxDepth).
-run(InnerState, Tape, HeadPosition, _, _) :-
-    not(accepts(InnerState)),
-    is_visited_conf(InnerState, Tape, HeadPosition),
-    retract(visitedConf(InnerState, Tape, HeadPosition)),
+    append(History, [InnerState-Tape-HeadPosition], ExtendedHistory),
+    run(NextState, UpdatedTape, NewHeadPosition, NewDepth, MaxDepth, ExtendedHistory).
+run(InnerState, Tape, HeadPosition, _, _, History) :-
+    member(InnerState-Tape-HeadPosition, History),
     fail.
 
 start :-
@@ -205,8 +191,9 @@ start :-
         % The configuration of the machine is determined by the state of the 
         % control and the configuration of the tape - this is a formal matter 
         % of an element of the set Q × {γ∆ω | γ ∈ Γ∗} × N.
-        ( !, run('S', Tape, 0, 0, 1000) ->
-            write_all_confs
+        ( !, run('S', Tape, 0, 0, 1000, []) ->
+            %write_all_confs
+            true
         ; writeln('Error: Turing Machine stopped abnormally.'),
           exitCode(abnormal_stopping, Code),
           retract_all_dynamic,
