@@ -76,6 +76,8 @@ replace_symbol(Tape, 'L', _, UpdatedTape) :-
 replace_symbol(Tape, 'R', _, UpdatedTape) :-
     UpdatedTape = Tape. 
 replace_symbol(Tape, NewTapeSymbol, HeadPosition, UpdatedTape) :-
+    NewTapeSymbol \= 'L',
+    NewTapeSymbol \= 'R',
     nth0(HeadPosition, Tape, _, Rest),
     nth0(HeadPosition, UpdatedTape, NewTapeSymbol, Rest).
 
