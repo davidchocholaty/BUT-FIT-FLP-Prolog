@@ -74,6 +74,7 @@ replace_symbol(Tape, NewTapeSymbol, HeadPosition, UpdatedTape) :-
 
 % TODO mozna nekde kontrola, zda nejsme mimo pasku uz
 update_head_position(Current, 'L', New) :-
+    Current > 0,
     New is Current - 1.
 update_head_position(Current, 'R', New) :-    
     New is Current + 1.
@@ -154,9 +155,14 @@ run(InnerState, Tape, HeadPosition, _, _, History) :-
 run(InnerState, Tape, HeadPosition, Depth, MaxDepth, History) :-
     Depth < MaxDepth,
     not(member(InnerState-Tape-HeadPosition, History)),
-    nth0(HeadPosition, Tape, TapeSymbol),    
+    length(Tape, TapeLength),
+    ( HeadPosition >= TapeLength ->
+      append(Tape, [' '], ActTape)
+    ; ActTape = Tape
+    ),
+    nth0(HeadPosition, ActTape, TapeSymbol),    
     rule(InnerState, TapeSymbol, NextState, NewTapeSymbol),
-    replace_symbol(Tape, NewTapeSymbol, HeadPosition, UpdatedTape),
+    replace_symbol(ActTape, NewTapeSymbol, HeadPosition, UpdatedTape),
     update_head_position(HeadPosition, NewTapeSymbol, NewHeadPosition),
     NewDepth is Depth + 1,
     append(History, [InnerState-Tape-HeadPosition], ExtendedHistory),
