@@ -24,16 +24,15 @@ read_lines(Ls) :-
 	).
 
 /** odstrani ze seznamu mezery */
-cut_whitespaces([], []).
-cut_whitespaces([' '|T], Res) :-
-    cut_whitespaces(T, Res).
-cut_whitespaces([H|T], [H|Res]) :-
-    cut_whitespaces(T, Res).
+cut_whitespaces_even([], []).
+cut_whitespaces_even([X], [X]).
+cut_whitespaces_even([H,_|T], [H|Res]) :-
+    cut_whitespaces_even(T, Res).
 
 /** odstrani ze list of lists mezery */
 cut_whitespaces_ll([], []).
 cut_whitespaces_ll([H|T], [HRes|TRes]) :-
-    cut_whitespaces(H, HRes),
+    cut_whitespaces_even(H, HRes),
     cut_whitespaces_ll(T, TRes).
 
 /** Dynamic rule for the Turing Machine rules */
@@ -111,18 +110,15 @@ last([_|T], Res) :-
 
 is_valid_state(X) :-
     atom_length(X, 1),
-    char_type(X, alpha),
     char_type(X, upper).
 
 is_valid_tape_symbol(X) :-
     atom_length(X, 1),
-    char_type(X, alpha),
-    char_type(X, lower).
+    (char_type(X, lower) ; char_type(X, space)).
 
 is_valid_new_tape_symbol(X) :-
     atom_length(X, 1),
-    char_type(X, alpha),
-    (X = 'L' ; X = 'R' ; char_type(X, lower)).
+    (X = 'L' ; X = 'R' ; char_type(X, lower) ; char_type(X, space)).
 
 is_valid_tape([]).
 is_valid_tape([H|T]) :-
@@ -181,6 +177,9 @@ start :-
         init(LL, Rules),
         cut_whitespaces_ll(Rules, RulesNoWhitespace),
         add_rules_from_list(RulesNoWhitespace),
+
+        %writeln(RulesNoWhitespace),
+
         valid_rules(RulesNoWhitespace),
 
         % Tape
