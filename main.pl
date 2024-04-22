@@ -78,7 +78,8 @@ update_head_position(Current, 'L', New) :-
     New is Current - 1.
 update_head_position(Current, 'R', New) :-    
     New is Current + 1.
-update_head_position(Current, _, New) :-
+update_head_position(Current, Symb, New) :-
+    Symb \= 'L',
     New is Current.
 
 add_state_to_tape(InnerState, Tape, HeadPosition, TapeWState) :-
@@ -148,11 +149,11 @@ valid_rules([H|T]) :-
     ).
 
 % TODO jeslti nekde pouzit !
-run(InnerState, Tape, HeadPosition, _, _, History) :-
+run(InnerState, Tape, HeadPosition, _, _, History) :-    
     accepts(InnerState),
     append(History, [InnerState-Tape-HeadPosition], ExtendedHistory),
     write_confs(ExtendedHistory).
-run(InnerState, Tape, HeadPosition, Depth, MaxDepth, History) :-
+run(InnerState, Tape, HeadPosition, Depth, MaxDepth, History) :-    
     Depth < MaxDepth,
     not(member(InnerState-Tape-HeadPosition, History)),
     length(Tape, TapeLength),
@@ -160,7 +161,7 @@ run(InnerState, Tape, HeadPosition, Depth, MaxDepth, History) :-
       append(Tape, [' '], ActTape)
     ; ActTape = Tape
     ),
-    nth0(HeadPosition, ActTape, TapeSymbol),    
+    nth0(HeadPosition, ActTape, TapeSymbol),
     rule(InnerState, TapeSymbol, NextState, NewTapeSymbol),
     replace_symbol(ActTape, NewTapeSymbol, HeadPosition, UpdatedTape),
     update_head_position(HeadPosition, NewTapeSymbol, NewHeadPosition),
@@ -195,7 +196,7 @@ start :-
         % The configuration of the machine is determined by the state of the 
         % control and the configuration of the tape - this is a formal matter 
         % of an element of the set Q × {γ∆ω | γ ∈ Γ∗} × N.
-        ( !, run('S', Tape, 0, 0, 1000, []) ->
+        ( !, run('S', Tape, 0, 0, 10000, []) ->
             true
         ; writeln('Error: Turing Machine stopped abnormally or looped.'),
           exitCode(abnormal_looping, Code),
