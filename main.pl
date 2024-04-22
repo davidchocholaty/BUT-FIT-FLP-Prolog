@@ -5,25 +5,36 @@ Author: David Chocholatý <xchoch09>
 Year: 2024
 */
 
-/** Read lines from standard input, ending at LF or EOF. */
+% Read line from the standard input, ending at LF or EOF.
+% read_line(-L,-C)
 read_line(L,C) :-
 	get_char(C),
 	(isEOFEOL(C), L = [], !;
 		read_line(LL,_),% atom_codes(C,[Cd]),
 		[C|LL] = L).
 
-/** Tests a character for EOF or LF. */
+% Tests a character for EOF or LF.
+% isEOFEOL(?C)
 isEOFEOL(C) :-
 	C == end_of_file;
 	(char_code(C,Code), Code==10).
 
+% Read lines from the standard input.
+% read_lines(-Ls)
 read_lines(Ls) :-
 	read_line(L,C),
 	( C == end_of_file, Ls = [] ;
 	  read_lines(LLs), Ls = [L|LLs]
 	).
 
-/** odstrani ze seznamu mezery */
+% Remove spaces from the list.
+%
+% The predicate removes the spaces from the list which are between symbols 
+% representing states and tape symbols. With that it removes only the even 
+% whitespace because the whitespace can represent the empty symbol, so they are
+% kept in list.
+%
+% cut_whitespaces_even(+List, ?Result)
 cut_whitespaces_even([], []).
 cut_whitespaces_even([X], [X]).
 cut_whitespaces_even([H,_|T], [H|Res]) :-
@@ -184,6 +195,12 @@ set_max_depth(Argv, MaxDepth) :-
     ; MaxDepth = 10000
     ).
 
+% Main predicate.
+%
+% The main predicate of the program reads the standard input, the user argument
+% and runs the simulation.
+%
+% start/0
 start :-
         init_exit_codes,
 
@@ -200,8 +217,6 @@ start :-
         init(LL, Rules),
         cut_whitespaces_ll(Rules, RulesNoWhitespace),
         add_rules_from_list(RulesNoWhitespace),
-
-        %writeln(RulesNoWhitespace),
 
         valid_rules(RulesNoWhitespace),
 
@@ -222,4 +237,4 @@ start :-
 
         retract_all_dynamic,
 
-		halt.
+        halt.
