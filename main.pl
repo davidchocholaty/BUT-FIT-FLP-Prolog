@@ -64,13 +64,18 @@ retract_all_dynamic :-
 replace_symbol([], _, _, []).
 replace_symbol(Tape, 'L', _, UpdatedTape) :-
     UpdatedTape = Tape.
-replace_symbol(Tape, 'R', _, UpdatedTape) :-
-    UpdatedTape = Tape. 
 replace_symbol(Tape, NewTapeSymbol, HeadPosition, UpdatedTape) :-
     NewTapeSymbol \= 'L',
-    NewTapeSymbol \= 'R',
-    nth0(HeadPosition, Tape, _, Rest),
-    nth0(HeadPosition, UpdatedTape, NewTapeSymbol, Rest).
+    length(Tape, TapeLength),
+    ( HeadPosition >= TapeLength ->      
+      append(Tape, [' '], ActTape)
+    ; ActTape = Tape
+    ),
+    ( NewTapeSymbol == 'R' ->
+      UpdatedTape = ActTape
+    ; nth0(HeadPosition, ActTape, _, Rest),
+      nth0(HeadPosition, UpdatedTape, NewTapeSymbol, Rest)
+    ).
 
 % TODO mozna nekde kontrola, zda nejsme mimo pasku uz
 update_head_position(Current, 'L', New) :-
@@ -158,17 +163,16 @@ run(InnerState, Tape, HeadPosition, Depth, MaxDepth, History) :-
     not(member(InnerState-Tape-HeadPosition, History)),
     length(Tape, TapeLength),
     ( HeadPosition >= TapeLength ->
-      append(Tape, [' '], ActTape)
-    ; ActTape = Tape
+      TapeSymbol = ' '
+    ; nth0(HeadPosition, Tape, TapeSymbol)
     ),
-    nth0(HeadPosition, ActTape, TapeSymbol),
-    rule(InnerState, TapeSymbol, NextState, NewTapeSymbol),
-    replace_symbol(ActTape, NewTapeSymbol, HeadPosition, UpdatedTape),
+    rule(InnerState, TapeSymbol, NextState, NewTapeSymbol),    
+    replace_symbol(Tape, NewTapeSymbol, HeadPosition, UpdatedTape),
     update_head_position(HeadPosition, NewTapeSymbol, NewHeadPosition),
     NewDepth is Depth + 1,
     append(History, [InnerState-Tape-HeadPosition], ExtendedHistory),
     run(NextState, UpdatedTape, NewHeadPosition, NewDepth, MaxDepth, ExtendedHistory).
-run(InnerState, Tape, HeadPosition, _, _, History) :-
+run(InnerState, Tape, HeadPosition, _, _, History) :-    
     member(InnerState-Tape-HeadPosition, History),
     fail.
 
