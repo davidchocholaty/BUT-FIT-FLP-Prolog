@@ -176,11 +176,23 @@ run(InnerState, Tape, HeadPosition, _, _, History) :-
     member(InnerState-Tape-HeadPosition, History),
     fail.
 
+set_max_depth(Argv, MaxDepth) :-
+    ( append(_, [Arg], Argv),
+      ( atom_number(Arg, MaxDepth),
+        number(MaxDepth)
+      )
+    ; MaxDepth = 10000
+    ).
+
 start :-
         init_exit_codes,
 
         prompt(_, ''),
         read_lines(LL),
+
+        % Use the default or user-defined maximum depth.
+        current_prolog_flag(argv, Argv),
+        set_max_depth(Argv, MaxDepth),
 
         % Preprocces rules and tape.
 
@@ -200,7 +212,7 @@ start :-
         % The configuration of the machine is determined by the state of the 
         % control and the configuration of the tape - this is a formal matter 
         % of an element of the set Q × {γ∆ω | γ ∈ Γ∗} × N.
-        ( !, run('S', Tape, 0, 0, 10000, []) ->
+        ( !, run('S', Tape, 0, 0, MaxDepth, []) ->
             true
         ; writeln('Error: Turing Machine stopped abnormally or looped.'),
           exitCode(abnormal_looping, Code),
