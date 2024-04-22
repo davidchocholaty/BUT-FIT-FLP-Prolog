@@ -24,32 +24,27 @@ read_lines(Ls) :-
 	).
 
 /** odstrani ze seznamu mezery */
-cut_whitespaces([], []).
-cut_whitespaces([' '|T], Res) :-
-    cut_whitespaces(T, Res).
-cut_whitespaces([H|T], [H|Res]) :-
-    cut_whitespaces(T, Res).
+cut_whitespaces_even([], []).
+cut_whitespaces_even([X], [X]).
+cut_whitespaces_even([H,_|T], [H|Res]) :-
+    cut_whitespaces_even(T, Res).
 
 /** odstrani ze list of lists mezery */
 cut_whitespaces_ll([], []).
 cut_whitespaces_ll([H|T], [HRes|TRes]) :-
-    cut_whitespaces(H, HRes),
+    cut_whitespaces_even(H, HRes),
     cut_whitespaces_ll(T, TRes).
 
 /** Dynamic rule for the Turing Machine rules */
+:- dynamic exitCode/2.
 :- dynamic rule/4.
-:- dynamic visitedConf/3.
-
-is_visited_conf(InnerState, Tape, HeadPosition) :-
-    visitedConf(InnerState, Tape, HeadPosition).
-
-add_conf(InnerState, Tape, HeadPosition) :-
-    assertz(visitedConf(InnerState, Tape, HeadPosition)).
 
 accepts(InnerState) :-
     InnerState == 'F'.
 
-init_head_position(0).
+init_exit_codes :-
+    assertz(exitCode('abnormal_looping', 1)),
+    assertz(exitCode('invalid_input', 2)).
 
 add_rule([InnerState, TapeSymbol, NextState, NewTapeSymbol]) :-
     assertz(rule(InnerState, TapeSymbol, NextState, NewTapeSymbol)).
@@ -61,31 +56,41 @@ add_rules_from_list([H|T]) :-
     add_rules_from_list(T).
 
 retract_all_dynamic :-
+    retractall(exitCode(_,_)),
     retractall(rule(_,_,_,_)),
     retractall(visitedConf(_,_,_)).
 
+% TODO jestli nespojit tuto a funkci pro posun
 replace_symbol([], _, _, []).
 replace_symbol(Tape, 'L', _, UpdatedTape) :-
     UpdatedTape = Tape.
-replace_symbol(Tape, 'R', _, UpdatedTape) :-
-    UpdatedTape = Tape. 
 replace_symbol(Tape, NewTapeSymbol, HeadPosition, UpdatedTape) :-
-    nth0(HeadPosition, Tape, _, Rest),
-    nth0(HeadPosition, UpdatedTape, NewTapeSymbol, Rest).
+    NewTapeSymbol \= 'L',
+    length(Tape, TapeLength),
+    ( HeadPosition >= TapeLength ->      
+      append(Tape, [' '], ActTape)
+    ; ActTape = Tape
+    ),
+    ( NewTapeSymbol == 'R' ->
+      UpdatedTape = ActTape
+    ; nth0(HeadPosition, ActTape, _, Rest),
+      nth0(HeadPosition, UpdatedTape, NewTapeSymbol, Rest)
+    ).
 
 % TODO mozna nekde kontrola, zda nejsme mimo pasku uz
 update_head_position(Current, 'L', New) :-
+    Current > 0,
     New is Current - 1.
 update_head_position(Current, 'R', New) :-    
     New is Current + 1.
-update_head_position(Current, _, New) :-
+update_head_position(Current, Symb, New) :-
+    Symb \= 'L',
     New is Current.
 
 add_state_to_tape(InnerState, Tape, HeadPosition, TapeWState) :-
     length(Pref, HeadPosition),
     append(Pref, Suf, Tape),
     append(Pref, [InnerState|Suf], TapeWState).
-
 
 list_2_str([], '').
 list_2_str([H|T], Res) :-
@@ -94,17 +99,11 @@ list_2_str([H|T], Res) :-
     string_concat(HStr, TStr, Res).
 
 write_confs([]).
-write_confs([H|T]) :-
-    list_2_str(H, HStr),
-    writeln(HStr),
+write_confs([InnerState-Tape-HeadPosition|T]) :-
+    add_state_to_tape(InnerState, Tape, HeadPosition, TapeWState),
+    list_2_str(TapeWState, TapeWStateStr),
+    writeln(TapeWStateStr),
     write_confs(T).
-
-write_all_confs :-
-    findall(TapeWState, (
-        visitedConf(InnerState, Tape, HeadPosition),
-        add_state_to_tape(InnerState, Tape, HeadPosition, TapeWState)
-    ), Confs),
-    write_confs(Confs).
 
 /** vrati seznam bez posledniho prvku (jako init funkce z Haskellu) */
 % https://stackoverflow.com/a/16175064
@@ -116,31 +115,84 @@ last([X], X).
 last([_|T], Res) :-
     last(T, Res).
 
+is_valid_state(X) :-
+    atom_length(X, 1),
+    char_type(X, upper).
+
+is_valid_tape_symbol(X) :-
+    atom_length(X, 1),
+    (char_type(X, lower) ; char_type(X, space)).
+
+is_valid_new_tape_symbol(X) :-
+    atom_length(X, 1),
+    (X = 'L' ; X = 'R' ; char_type(X, lower) ; char_type(X, space)).
+
+is_valid_tape([]).
+is_valid_tape([H|T]) :-
+    ( is_valid_tape_symbol(H) ->
+      is_valid_tape(T)
+    ; writeln('Error: invalid input Turing Machine tape.'),
+      exitCode(invalid_input, Code),
+      retract_all_dynamic,
+      halt(Code)
+    ).
+
+is_valid_rule([InnerState, TapeSymbol, NextState, NewTapeSymbol]) :-
+    is_valid_state(InnerState),
+    is_valid_state(NextState),
+    is_valid_tape_symbol(TapeSymbol),
+    is_valid_new_tape_symbol(NewTapeSymbol).
+
+valid_rules([]).
+valid_rules([H|T]) :-
+    ( is_valid_rule(H) ->
+      valid_rules(T)
+    ; writeln('Error: invalid input Turing Machine rule.'),
+      exitCode(invalid_input, Code),
+      retract_all_dynamic,
+      halt(Code)
+    ).
+
 % TODO jeslti nekde pouzit !
-run(InnerState, Tape, HeadPosition, Depth, MaxDepth) :-
-    Depth < MaxDepth,
+run(InnerState, Tape, HeadPosition, _, _, History) :-    
     accepts(InnerState),
-    add_conf(InnerState, Tape, HeadPosition).
-run(InnerState, Tape, HeadPosition, Depth, MaxDepth) :-
+    append(History, [InnerState-Tape-HeadPosition], ExtendedHistory),
+    write_confs(ExtendedHistory).
+run(InnerState, Tape, HeadPosition, Depth, MaxDepth, History) :-    
     Depth < MaxDepth,
-    not(is_visited_conf(InnerState, Tape, HeadPosition)),
-    add_conf(InnerState, Tape, HeadPosition),
-    nth0(HeadPosition, Tape, TapeSymbol),
-    %once(rule(InnerState, TapeSymbol, NextState, NewTapeSymbol)),
-    rule(InnerState, TapeSymbol, NextState, NewTapeSymbol),
+    not(member(InnerState-Tape-HeadPosition, History)),
+    length(Tape, TapeLength),
+    ( HeadPosition >= TapeLength ->
+      TapeSymbol = ' '
+    ; nth0(HeadPosition, Tape, TapeSymbol)
+    ),
+    rule(InnerState, TapeSymbol, NextState, NewTapeSymbol),    
     replace_symbol(Tape, NewTapeSymbol, HeadPosition, UpdatedTape),
     update_head_position(HeadPosition, NewTapeSymbol, NewHeadPosition),
     NewDepth is Depth + 1,
-    run(NextState, UpdatedTape, NewHeadPosition, NewDepth, MaxDepth).
-run(InnerState, Tape, HeadPosition, _, _) :-
-    not(accepts(InnerState)),
-    is_visited_conf(InnerState, Tape, HeadPosition),
-    retract(visitedConf(InnerState, Tape, HeadPosition)),
+    append(History, [InnerState-Tape-HeadPosition], ExtendedHistory),
+    run(NextState, UpdatedTape, NewHeadPosition, NewDepth, MaxDepth, ExtendedHistory).
+run(InnerState, Tape, HeadPosition, _, _, History) :-    
+    member(InnerState-Tape-HeadPosition, History),
     fail.
 
+set_max_depth(Argv, MaxDepth) :-
+    ( append(_, [Arg], Argv),
+      ( atom_number(Arg, MaxDepth),
+        number(MaxDepth)
+      )
+    ; MaxDepth = 10000
+    ).
+
 start :-
+        init_exit_codes,
+
         prompt(_, ''),
         read_lines(LL),
+
+        % Use the default or user-defined maximum depth.
+        current_prolog_flag(argv, Argv),
+        set_max_depth(Argv, MaxDepth),
 
         % Preprocces rules and tape.
 
@@ -149,96 +201,25 @@ start :-
         cut_whitespaces_ll(Rules, RulesNoWhitespace),
         add_rules_from_list(RulesNoWhitespace),
 
+        %writeln(RulesNoWhitespace),
+
+        valid_rules(RulesNoWhitespace),
+
         % Tape
         last(LL, Tape),
-
-        %write(RulesNoWhitespace),
-        %write(Tape),
+        is_valid_tape(Tape),
 
         % The configuration of the machine is determined by the state of the 
         % control and the configuration of the tape - this is a formal matter 
         % of an element of the set Q × {γ∆ω | γ ∈ Γ∗} × N.
-        
-        % TODO mozna mohou i nektere z toho byt reprezentovany jako dynamic (v podstate by se to dalo aplikovat na vsechny tri, 
-        % ale asi je hloupost to mit, protoze vzdy u kazdyho muze byt pouze jeden predikat - jeden stav, ...)
-
-        % Mozna ale by nebylo spatny neco jako uchovavat vsechny tri dohromady, abych pak byl schopny detekovat zacykleni.
-
-        run('S', Tape, 0, 0, 1000),
-
-        write_all_confs,
+        ( !, run('S', Tape, 0, 0, MaxDepth, []) ->
+            true
+        ; writeln('Error: Turing Machine stopped abnormally or looped.'),
+          exitCode(abnormal_looping, Code),
+          retract_all_dynamic,
+          halt(Code)
+        ),
 
         retract_all_dynamic,
 
 		halt.
-
-
-/** rozdeli radek na podseznamy */
-%split_line([],[[]]) :- !.
-%split_line([' '|T], [[]|S1]) :- !, split_line(T,S1).
-%split_line([32|T], [[]|S1]) :- !, split_line(T,S1).    % aby to fungovalo i s retezcem na miste seznamu
-%split_line([H|T], [[H|G]|S1]) :- split_line(T,[G|S1]). % G je prvni seznam ze seznamu seznamu G|S1
-
-
-/** vstupem je seznam radku (kazdy radek je seznam znaku) */
-%split_lines([],[]).
-%split_lines([L|Ls],[H|T]) :- split_lines(Ls,T), split_line(L,H).
-
-/** nacte zadany pocet radku */
-%read_lines2([],0).
-%read_lines2(Ls,N) :-
-%	N > 0,
-%	read_line(L,_),
-%	N1 is N-1,
-%	read_lines2(LLs, N1),
-%	Ls = [L|LLs].
-
-
-/** vypise seznam radku (kazdy radek samostatne) */
-%write_lines2([]).
-%write_lines2([H|T]) :- writeln(H), write_lines2(T). %(writeln je "knihovni funkce")
-
-
-/** rozdeli radek na podseznamy -- pracuje od konce radku */
-%zalozit prvni (tzn. posledni) seznam:
-%split_line2([],[[]]) :- !.
-%pridat novy seznam:
-%split_line2([' '|T], [[]|S1]) :- !, split_line2(T,S1).
-%pridat novy seznam, uchovat oddelujici znak:
-%split_line2([H|T], [[],[H]|S1]) :- (H=','; H=')'; H='('), !, split_line2(T,S1).
-%pridat znak do existujiciho seznamu:
-%split_line2([H|T], [[H|G]|S1]) :- split_line2(T,[G|S1]).
-
-
-/** pro vsechny radky vstupu udela split_line2 */
-% vstupem je seznam radku (kazdy radek je seznam znaku)
-%split_lines2([],[]).
-%ssplit_lines2([L|Ls],[H|T]) :- split_lines2(Ls,T), split_line2(L,H).
-
-
-/** nacte N radku vstupu, zpracuje, vypise */
-%start2(N) :-
-%		prompt(_, ''),
-%		read_lines2(LL, N),
-%		split_lines2(LL,S),
-%		write_lines2(S).
-
-
-/** prevede retezec na seznam atomu */
-% pr.: string("12.35",S). S = ['1', '2', '.', '3', '5'].
-%retezec([],[]).
-%retezec([H|T],[C|CT]) :- atom_codes(C,[H]), retezec(T,CT).
-
-
-/** prevede seznam cislic na cislo */
-% pr.: cislo([1,2,'.',3,5],X). X = 12.35
-%cislo(N,X) :- cislo(N,0,X).
-%cislo([],F,F).
-%cislo(['.'|T],F,X) :- !, cislo(T,F,X,10).
-%cislo([H|T],F,X) :- FT is 10*F+H, cislo(T,FT,X).
-%cislo([],F,F,_).
-%cislo([H|T],F,X,P) :- FT is F+H/P, PT is P*10, cislo(T,FT,X,PT).
-
-
-/** existuje knihovni predikat number_chars(?Number, ?CharList) */
-% pr.: number_chars(12.35, ['1', '2', '.', '3', '5']).

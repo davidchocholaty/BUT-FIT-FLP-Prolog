@@ -1,0 +1,22 @@
+S   S R
+S a S R
+S b A R
+A b A R
+A c B R
+B c B R
+B   D L
+D a D L
+D b D L
+D c D L
+D x D L
+D   E R
+E   F  
+E x E R
+E a G x
+G x G R
+G a G R
+G b H x
+H x H R
+H b H R
+H c D x
+ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccccccccccccccccccccccccccccccc
