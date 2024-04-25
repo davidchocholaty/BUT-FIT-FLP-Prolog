@@ -259,12 +259,11 @@ valid_rules([H|T]) :-
 % The predicate runs the Turing Machine simulation.
 %
 % run(?InnerState, +Tape, ?HeadPosition, +Depth, +MaxDepth, ?History)
-
-% TODO jeslti nekde pouzit !
-run(InnerState, Tape, HeadPosition, _, _, History) :-    
+run(InnerState, Tape, HeadPosition, _, _, History) :-
     accepts(InnerState),
     append(History, [InnerState-Tape-HeadPosition], ExtendedHistory),
-    write_confs(ExtendedHistory).
+    write_confs(ExtendedHistory),
+    !.
 run(InnerState, Tape, HeadPosition, Depth, MaxDepth, History) :-    
     Depth < MaxDepth,
     not(member(InnerState-Tape-HeadPosition, History)),
@@ -281,6 +280,7 @@ run(InnerState, Tape, HeadPosition, Depth, MaxDepth, History) :-
     run(NextState, UpdatedTape, NewHeadPosition, NewDepth, MaxDepth, ExtendedHistory).
 run(InnerState, Tape, HeadPosition, _, _, History) :-    
     member(InnerState-Tape-HeadPosition, History),
+    !,
     fail.
 
 % The predicate sets the maximum depth for searching (cycle prevention).
