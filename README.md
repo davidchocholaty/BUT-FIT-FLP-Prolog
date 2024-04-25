@@ -22,7 +22,7 @@ To run the program using the own input file, run it as follows:
 
 To run the prepared test input file, replace ```your_input_file``` with some of the files mentioned in the [Custom inputs](#custom-inputs).
 
-Extension: as an extension, a user parameter is defined. For the single sub-part of the cycle detection approach, it is necessary to define the maximum search depth. By default, the value is defined as ```10000```, however, it can be set by a user as follows (for depth ```2000```):
+**EXTENSION**: as an extension, a user parameter is defined. For the single sub-part of the cycle detection approach, it is necessary to define the maximum search depth. By default, the value is defined as ```10000```, however, it can be set by a user as follows (for depth ```2000```):
 
 ```
 ./flp23-log 2000 < your_input_file
