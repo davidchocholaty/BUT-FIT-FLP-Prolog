@@ -15,7 +15,6 @@ ZIP_FILE = flp-log-$(LOGIN).zip
 
 .PHONY: all pack clean
 
-# swipl -t halt -q -g start -o $(TARGET) -c $(SOURCE)	
 all: $(ALL)
 	swipl -q -g start -o $(EXECUTABLE) -c $(MAIN)
 
@@ -24,5 +23,5 @@ pack: $(ZIP_FILE)
 clean:
 	rm -f $(EXECUTABLE) $(ZIP_FILE)
 
-$(ZIP_FILE): *.pl Makefile README.md
+$(ZIP_FILE): *.pl Makefile README.md tests/*
 	zip $@ $^
