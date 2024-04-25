@@ -15,7 +15,6 @@ ZIP_FILE = flp-log-$(LOGIN).zip
 
 .PHONY: all pack clean
 
-# swipl -t halt -q -g start -o $(TARGET) -c $(SOURCE)	
 all: $(ALL)
 	swipl -q -g start -o $(EXECUTABLE) -c $(MAIN)
 

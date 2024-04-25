@@ -4,7 +4,7 @@
 BINARY="./flp23-log"
 
 # Set the directory where your test files are located
-TEST_DIR="./tests"
+TEST_DIR="./tests_large"
 
 # Variables for colored output
 GREEN='\033[0;32m'  # Green color for passed tests
