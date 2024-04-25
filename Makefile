@@ -16,7 +16,7 @@ ZIP_FILE = flp-log-$(LOGIN).zip
 .PHONY: all pack clean
 
 all: $(ALL)
-	swipl -q -g start -o $(EXECUTABLE) -c $(MAIN)
+	swipl -G16g -q -g start -o $(EXECUTABLE) -c $(MAIN) || swipl --stack_limit=16g -q -g start -o $(EXECUTABLE) -c $(MAIN)
 
 pack: $(ZIP_FILE)
 
